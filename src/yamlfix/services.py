@@ -79,7 +79,7 @@ def fix_files(  # pylint: disable=too-many-branches
             source = file_.read()
             file_name = file_.name
 
-        log.debug("Fixing file %s...", file_name)
+        log.log(15, "Fixing file %s...", file_name)
         fixed_source = fix_code(source, config)
 
         if fixed_source != source:
