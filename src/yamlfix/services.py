@@ -9,7 +9,6 @@ import warnings
 from typing import List, Optional, Tuple, Union, overload
 
 from _io import TextIOWrapper
-
 from yamlfix.adapters import SourceCodeFixer, Yaml
 from yamlfix.model import YamlfixConfig
 
@@ -29,9 +28,7 @@ def fix_files(files: Files, dry_run: Optional[bool]) -> Tuple[Optional[str], boo
 
 
 @overload
-def fix_files(
-    files: Files, dry_run: Optional[bool], config: Optional[YamlfixConfig]
-) -> Tuple[Optional[str], bool]:
+def fix_files(files: Files, dry_run: Optional[bool], config: Optional[YamlfixConfig]) -> Tuple[Optional[str], bool]:
     ...  # pragma: no cover
 
 
@@ -79,8 +76,12 @@ def fix_files(  # pylint: disable=too-many-branches
             source = file_.read()
             file_name = file_.name
 
-        log.log(15, "Fixing file %s...", file_name)
-        fixed_source = fix_code(source, config)
+        log.debug("Fixing file %s...", file_name)
+        try:
+            fixed_source = fix_code(source, config)
+        except Exception as exc:
+            log.error("Error fixing %s: %s", file_name, exc)
+            continue
 
         if fixed_source != source:
             changed = True
