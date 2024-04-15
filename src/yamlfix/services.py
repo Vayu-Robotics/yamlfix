@@ -66,6 +66,7 @@ def fix_files(  # pylint: disable=too-many-branches
         )
 
     total_fixed = 0
+    total_errors = 0
 
     for file_ in files:
         if isinstance(file_, str):
@@ -81,6 +82,7 @@ def fix_files(  # pylint: disable=too-many-branches
             fixed_source = fix_code(source, config)
         except Exception as exc:
             log.error("Error fixing %s: %s", file_name, exc)
+            total_errors += 1
             continue
 
         if fixed_source != source:
@@ -91,7 +93,7 @@ def fix_files(  # pylint: disable=too-many-branches
                 log.info("Fixed %s", file_name)
                 total_fixed += 1
         else:
-            log.log(15, "%s is already well formatted", file_name)
+            log.debug("%s is already well formatted", file_name)
 
         if file_name == "<stdin>":
             if dry_run is None:
@@ -109,11 +111,13 @@ def fix_files(  # pylint: disable=too-many-branches
                 file_.write(fixed_source)
                 file_.truncate()
     log.info(
-        "Checked %d files: %d fixed, %d left unchanged",
+        "Checked %d files: %d fixed, %d left unchanged, %d failed",
         len(files),
         total_fixed,
-        len(files) - total_fixed,
+        len(files) - total_fixed - total_errors,
+        total_errors,
     )
+    log.info("Total errors: %d", total_errors)
 
     if dry_run is None:
         return None
