@@ -20,19 +20,21 @@ log = logging.getLogger(__name__)
 def _matches_any_glob(
     file_to_test: Path, dir_: Path, globs: Optional[List[str]]
 ) -> bool:
-    return any(file_to_test in dir_.glob(glob) for glob in (globs or []))
-
+    return any(file_to_test in dir_.glob(glob) for glob in (globs or []) if glob)
 
 def _find_all_yaml_files(
     dir_: Path, include_globs: Optional[List[str]], exclude_globs: Optional[List[str]]
 ) -> List[Path]:
-    files = [dir_.rglob(glob) for glob in (include_globs or [])]
+    include_files = []
+    for include_glob in (include_globs or []):
+        if include_glob:
+            include_files.extend(dir_.rglob(include_glob))
     return [
         file
-        for list_ in files
-        for file in list_
+        for file in include_files
         if not _matches_any_glob(file, dir_, exclude_globs) and os.path.isfile(file)
     ]
+
 
 
 @click.command()
