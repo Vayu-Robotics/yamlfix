@@ -92,17 +92,42 @@ def cli(  # pylint: disable=too-many-arguments
 
     Use - to read from stdin. No other files can be specified in this case.
     """
+    load_logger(verbose)
+    
     files_to_fix: List[TextIOWrapper] = []
     if "-" in files:
         if len(files) > 1:
             raise ValueError("Cannot specify '-' and other files at the same time.")
         files_to_fix = [sys.stdin]
     else:
+        # Load configuration early to get exclude_dirs
+        config = YamlfixConfig()
+        if verbose:
+            log.info("Config before loading: exclude_dirs=%s", config.exclude_dirs)
+        configure_yamlfix(
+            config, config_file, _parse_env_vars_as_yamlfix_config(env_prefix.lower())
+        )
+        if verbose:
+            log.info("Config after loading: exclude_dirs=%s", config.exclude_dirs)
+        
+        # Merge CLI exclude arguments with configuration exclude_dirs
+        all_excludes = list(exclude or [])
+        if config.exclude_dirs:
+            all_excludes.extend(config.exclude_dirs)
+        
+        if verbose:
+            log.info("Exclude patterns: %s", all_excludes)
+        
         paths = [Path(file) for file in files]
         real_files = []
         for provided_file in paths:
             if provided_file.is_dir():
-                real_files.extend(_find_all_yaml_files(provided_file, include, exclude))
+                found_files = _find_all_yaml_files(provided_file, include, all_excludes)
+                if verbose:
+                    log.info("Found %d YAML files in %s", len(found_files), provided_file)
+                    for f in found_files:
+                        log.info("  %s", f)
+                real_files.extend(found_files)
             else:
                 real_files.append(provided_file)
         files_to_fix = [file.open("r+") for file in real_files]
@@ -110,13 +135,14 @@ def cli(  # pylint: disable=too-many-arguments
         log.warning("No YAML files found!")
         sys.exit(0)
 
-    load_logger(verbose)
     log.info("YamlFix: %s files", "Checking" if check else "Fixing")
 
-    config = YamlfixConfig()
-    configure_yamlfix(
-        config, config_file, _parse_env_vars_as_yamlfix_config(env_prefix.lower())
-    )
+    # If config wasn't loaded yet (stdin case), load it now
+    if 'config' not in locals():
+        config = YamlfixConfig()
+        configure_yamlfix(
+            config, config_file, _parse_env_vars_as_yamlfix_config(env_prefix.lower())
+        )
 
     fixed_code, changed = services.fix_files(files_to_fix, check, config)
     for file_to_close in files_to_fix:

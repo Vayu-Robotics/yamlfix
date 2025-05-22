@@ -1,6 +1,6 @@
 """Define program entities like configuration value entities."""
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from maison.schema import ConfigSchema
 
@@ -34,3 +34,4 @@ class YamlfixConfig(ConfigSchema):
     preserve_quotes: bool = False
     quote_representation: str = "'"
     sequence_style: YamlNodeStyle = YamlNodeStyle.FLOW_STYLE
+    exclude_dirs: List[str] = []
